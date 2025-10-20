@@ -46,3 +46,4 @@ class Filmes{
         this.status = status
     }
 }
+export default Filmes
