@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Filmes from "../models/filmes";
+import { pool } from "../config/db";
 
 let filmes = [];
 
@@ -21,19 +22,23 @@ export async function getNowPlaying(req: Request, res: Response){
 
             },
     })
-        const dados = await resposta.json()
-        const  filmes = dados.results.map((filme: any)=>
-          new Filmes(
-          filme.id,
-          filme.original_title,
-          filme.overview,
-          filme.release_date,
-          filme.status,
-        ))
-        
-        res.json(filmes)
+        const filmesInseridos = [];
 
-        console.log(filmes)
+        const dados = await resposta.json()
+
+        for (const filme of dados.results) {
+        const resInsert = await pool.query(
+        `INSERT INTO filmes (id, original_title, overview, release_date, status)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [filme.id, filme.original_title, filme.overview, filme.release_date, filme.status]
+      );
+      filmesInseridos.push(resInsert.rows[0]);
+    }
+        
+        res.json(filmesInseridos)
+
+        console.log(filmesInseridos)
     }catch(erro){
         console.log(erro)
     }
