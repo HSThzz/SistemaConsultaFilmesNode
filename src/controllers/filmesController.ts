@@ -22,23 +22,32 @@ export async function getNowPlaying(req: Request, res: Response){
 
             },
     })
-        const filmesInseridos = [];
+        //const filmesInseridos = [];
 
         const dados = await resposta.json()
 
-        for (const filme of dados.results) {
-        const resInsert = await pool.query(
-        `INSERT INTO filmes (id, original_title, overview, release_date, status)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
-        [filme.id, filme.original_title, filme.overview, filme.release_date, filme.status]
-      );
-      filmesInseridos.push(resInsert.rows[0]);
-    }
-        
-        res.json(filmesInseridos)
+    for (const filme of dados.results) {
+             // 1️⃣ Verifica se o filme já existe
+        const check = await pool.query(
+            `SELECT * FROM filmes WHERE id = $1`,
+            [filme.id]
+        );
 
-        console.log(filmesInseridos)
+        if (check.rows.length > 0) {
+            // Filme já cadastrado, apenas ignora ou registra log
+            console.log(`Filme ${filme.original_title} já cadastrado`);
+            continue; // pula para o próximo filme
+        }
+
+  // 2️⃣ Insere o filme no banco
+        await pool.query(
+            `INSERT INTO filmes (id, original_title, overview, release_date, status)
+            VALUES ($1, $2, $3, $4, $5)`,
+            [filme.id, filme.original_title, filme.overview, filme.release_date, filme.status || "Released"]
+        );
+
+        console.log(`Filme ${filme.original_title} inserido`);
+    }
     }catch(erro){
         console.log(erro)
     }
