@@ -1,20 +1,19 @@
 import { Router } from "express";
-import { getNowPlaying, addFilme, getPopular, getFilmeById, getFilmeByTitulo } from "../controllers/filmesController";
-
+import { getNowPlaying, getPopular, getFilmeById, getFilmeByTitulo } from "../controllers/filmesController";
+import { autenticar } from "../middlewares/authMiddleware";
 
 
 
 const router = Router();
 
-router.post("/adicionar", addFilme);
 
-router.get("/now-playing", getNowPlaying)
+router.get("/now-playing", autenticar, getNowPlaying)
 
-router.get("/popular", getPopular)
+router.get("/popular", autenticar, getPopular)
 
-router.get("/:id", getFilmeById)
+router.get("/:id", autenticar, getFilmeById)
 
-router.get("/titulo/:titulo", getFilmeByTitulo)
+router.get("/titulo/:titulo", autenticar, getFilmeByTitulo)
 
 
 
