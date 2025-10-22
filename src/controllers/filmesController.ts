@@ -13,44 +13,64 @@ export function addFilme(req: Request, res: Response) {
   res.status(201).json(novoFilme);
 }
 
-export async function getNowPlaying(req: Request, res: Response){
-  try{
-        const resposta = await fetch("https://api.themoviedb.org/3/movie/now_playing?api_key=YOUR_API_KEY&language=pt-BR&page=1",{
-            method: "GET",
-            headers: {
-                Authorization: "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhODdjOGFhYzYzYzJjNGNmMzA5MTQxMWJkYTc5NTJhNyIsIm5iZiI6MTc1ODcyOTUyOC4wODUsInN1YiI6IjY4ZDQxNTM4Njc3Y2EyNzE3ZjcxOWQyYSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.MjaVOiJsyUscImOv_MlS0_uDUu98MGsXlnV6v0wf7lc"
+export async function getNowPlaying(req: Request, res: Response) {
+  try {
+    // 1️⃣ Requisição para a API externa (TMDB)
+    const resposta = await fetch(
+      "https://api.themoviedb.org/3/movie/now_playing?language=pt-BR&page=1",
+      {
+        method: "GET",
+        headers: {
+          Authorization:
+            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhODdjOGFhYzYzYzJjNGNmMzA5MTQxMWJkYTc5NTJhNyIsIm5iZiI6MTc1ODcyOTUyOC4wODUsInN1YiI6IjY4ZDQxNTM4Njc3Y2EyNzE3ZjcxOWQyYSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.MjaVOiJsyUscImOv_MlS0_uDUu98MGsXlnV6v0wf7lc",
+        },
+      }
+    );
 
-            },
-    })
-        //const filmesInseridos = [];
+    const dados = await resposta.json();
 
-        const dados = await resposta.json()
+    // 2️⃣ Arrays para acompanhar o que foi feito
+    const inseridos: string[] = [];
+    const repetidos: string[] = [];
 
+    // 3️⃣ Verifica e insere no banco
     for (const filme of dados.results) {
-             // 1️⃣ Verifica se o filme já existe
-        const check = await pool.query(
-            `SELECT * FROM filmes WHERE id = $1`,
-            [filme.id]
-        );
+      const check = await pool.query(`SELECT * FROM filmes WHERE id = $1`, [
+        filme.id,
+      ]);
 
-        if (check.rows.length > 0) {
-            // Filme já cadastrado, apenas ignora ou registra log
-            console.log(`Filme ${filme.original_title} já cadastrado`);
-            continue; // pula para o próximo filme
-        }
+      if (check.rows.length > 0) {
+        repetidos.push(filme.original_title);
+        continue;
+      }
 
-  // 2️⃣ Insere o filme no banco
-        await pool.query(
-            `INSERT INTO filmes (id, original_title, overview, release_date, status)
-            VALUES ($1, $2, $3, $4, $5)`,
-            [filme.id, filme.original_title, filme.overview, filme.release_date, filme.status || "Released"]
-        );
+      await pool.query(
+        `INSERT INTO filmes (id, original_title, overview, release_date, status)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          filme.id,
+          filme.original_title,
+          filme.overview,
+          filme.release_date,
+          filme.status,
+        ]
+      );
 
-        console.log(`Filme ${filme.original_title} inserido`);
+      inseridos.push(filme.original_title);
     }
-    }catch(erro){
-        console.log(erro)
-    }
+
+    // 4️⃣ Retorna os dados da API + o resultado da operação
+    res.json({
+      mensagem: "Filmes processados com sucesso!",
+      totalFilmes: dados.results.length,
+      filmesDaApi: dados.results, // aqui estão os filmes da API
+      inseridos,
+      repetidos,
+    });
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: "Erro ao buscar e salvar filmes" });
+  }
 }
 export async function getPopular(req: Request, res: Response) {
   try{
